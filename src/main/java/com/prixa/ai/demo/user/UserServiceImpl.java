@@ -11,10 +11,9 @@ import static com.prixa.ai.demo.utils.MessagesConstant.*;
 
 @Service
 @CacheConfig(cacheNames = {"users"})
-public class UserServiceImpl implements UserService{
+public class UserServiceImpl implements UserService {
 
     private Map<String, User> userMap = new HashMap();
-    private final String MAIL = "@kalimat.ai";
 
     @Cacheable
     @Override
@@ -44,17 +43,17 @@ public class UserServiceImpl implements UserService{
     public String deleteUser(String username) {
         boolean exist = checkUserExist(username);
         String result;
-        if(exist){
+        if (exist) {
             this.userMap.remove(username);
-            result = USER_SUCCESS_DELETED;
+            result = USER_DELETION_SUCCESS;
         } else
             result = USER_NOT_FOUND;
         return result;
     }
 
-    private boolean checkUserExist(String username){
-        boolean exist=false;
-        if(this.userMap.get(username) != null){
+    private boolean checkUserExist(String username) {
+        boolean exist = false;
+        if (this.userMap.get(username) != null) {
             exist = true;
         }
         return exist;

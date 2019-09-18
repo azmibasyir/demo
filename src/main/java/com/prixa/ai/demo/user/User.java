@@ -18,6 +18,13 @@ public class User {
         this.fullName = fullName;
     }
 
+    public User(@NotNull(message = "full name not yet filled") String fullName, String username, String email, Integer count) {
+        this.fullName = fullName;
+        this.username = username;
+        this.email = email;
+        this.count = count;
+    }
+
     public String getFullName() {
         return fullName;
     }

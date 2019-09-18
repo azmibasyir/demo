@@ -1,142 +1,117 @@
 package com.prixa.ai.demo.user;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.prixa.ai.demo.DemoApplicationTestConfig;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
-import static com.prixa.ai.demo.utils.MessagesConstant.USER_NOT_FOUND;
-import static com.prixa.ai.demo.utils.MessagesConstant.USER_SUCCESS_DELETED;
+import static com.prixa.ai.demo.utils.MessagesConstant.*;
 import static org.junit.Assert.assertEquals;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
-@RunWith(SpringJUnit4ClassRunner.class)
-@WebMvcTest(UserController.class)
+@RunWith(MockitoJUnitRunner.class)
 @ContextConfiguration(classes = DemoApplicationTestConfig.class)
 public class UserControllerTest {
 
     private final Logger logger = LoggerFactory.getLogger(UserControllerTest.class);
+    private final String USERNAME = "azmi.basyir";
+    private final String USERNAME_NOT_FOUND = "marpaung";
+    private final String FULLNAME = "azmi basyir";
+    private final String FIRST_NAME = "azmi";
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Mock
+    private UserService userService;
 
-    @Autowired
+    @InjectMocks
     private UserController userController;
 
     @Test
-    public void createUser() throws Exception {
+    public void createUser() {
+        User user = generateUser(FULLNAME);
+        User usr = new User();
+        usr.setFullName(FULLNAME);
+        when(userService.createUser(any(String.class)))
+                .thenReturn(user);
+        user = userController.createUser(usr);
+        logger.info(user.toString());
+    }
+
+    @Test
+    public void createUserOnlyFirstName() {
+        User user = generateUser(FIRST_NAME);
+        User usr = new User();
+        usr.setFullName(FIRST_NAME);
+        when(userService.createUser(any(String.class)))
+                .thenReturn(user);
+        user = userController.createUser(usr);
+        logger.info(user.toString());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void createUserWhenFullNameNull() {
+        User user = generateUser(null);
+        when(userService.createUser(any(String.class)))
+                .thenReturn(user);
+        userController.createUser(null);
+    }
+
+    @Test
+    public void fetchingAllUser() {
+        when(userService.findAll())
+                .thenReturn(generateUsers());
+        Map<String, User> userMap = userController.getAllUsers();
+        logger.info(userMap.toString());
+    }
+
+    @Test
+    public void deleteUserExist() {
+        when(userService.deleteUser(USERNAME))
+                .thenReturn(USER_DELETION_SUCCESS);
+        String result = userController.deleteUser(USERNAME);
+        logger.info(result);
+        assertEquals(result, USER_DELETION_SUCCESS);
+    }
+
+    @Test
+    public void deleteUserNotExist() {
+        when(userService.deleteUser(USERNAME_NOT_FOUND))
+                .thenReturn(USER_NOT_FOUND);
+        String result = userController.deleteUser(USERNAME_NOT_FOUND);
+        logger.info(result);
+        assertEquals(result, USER_NOT_FOUND);
+    }
+
+    private User generateUser(String fullname) {
+        String[] name = fullname.split(" ");
+        String username;
         User user = new User();
-        user.setFullName("azmi basyir");
-        ObjectWriter ow = initialObjectWriter();
-        String requestJson = ow.writeValueAsString(user);
-
-        mockMvc.perform(
-                post("/users/addUser")
-                        .content(requestJson)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isCreated())
-                .andExpect(content().json("{}"));
-    }
-
-    @Test
-    public void createUserWhenFullNameNull() throws Exception {
-        User user = new User();
-        user.setFullName(null);
-        ObjectWriter ow = initialObjectWriter();
-        String requestJson = ow.writeValueAsString(user);
-
-        mockMvc.perform(
-                post("/users/addUser")
-                        .content(requestJson)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    public void fetchingAllUser() throws Exception {
-
-        generateUser();
-        fetchAllUser();
-
-    }
-
-    @Test
-    public void deleteUserExist() throws Exception {
-        generateUser();
-        logger.info("################BEFORE DELETE#####################");
-        fetchAllUser();
-
-        ResultActions result = mockMvc.perform(
-                delete("/users/deleteUser/azmi.basyir")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-
-        logger.info("################AFTER DELETE#####################");
-        fetchAllUser();
-
-        assertEquals(result.andReturn().getResponse().getContentAsString(), USER_SUCCESS_DELETED);
-    }
-
-    @Test
-    public void deleteUserNotExist() throws Exception {
-        logger.info("################BEFORE DELETE#####################");
-        fetchAllUser();
-        ResultActions result = mockMvc.perform(
-                delete("/users/deleteUser/azmi.satu")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-        logger.info("################AFTER DELETE#####################");
-        fetchAllUser();
-
-        assertEquals(result.andReturn().getResponse().getContentAsString(), USER_NOT_FOUND);
-    }
-
-    private ObjectWriter initialObjectWriter() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
-        ObjectWriter ow = mapper.writer().withDefaultPrettyPrinter();
-        return ow;
-    }
-
-    private void generateUser() {
-        List<String> fullNameLst = new ArrayList<>();
-        fullNameLst.add("azmi basyir");
-        fullNameLst.add("azmi marpaung");
-        fullNameLst.add("marpaung azmi");
-
-        for (String fullName : fullNameLst) {
-            userController.createUser(new User(fullName));
+        if (name.length == 1) {
+            username = name[0].toLowerCase();
+        } else {
+            username = name[0].concat(".").concat(name[name.length - 1]);
         }
+        user.setFullName(fullname);
+        user.setEmail(username.concat(MAIL));
+        user.setUsername(username);
+        return user;
     }
 
-    private void fetchAllUser() throws Exception {
-        mockMvc.perform(
-                get("/users/all")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().json("{}"))
-                .andDo(MockMvcResultHandlers.print());
+    public Map<String, User> generateUsers() {
+        Map<String, User> userMap = new HashMap<>();
+        userMap.put("azmi.basyir", new User("azmi basyir", "azmi.basyir", "azmi.basyir@kalimat.ai", 1));
+        userMap.put("azmi.marpaung", new User("azmi marpaung", "azmi.marpaung", "azmi.marpaung@kalimat.ai", 1));
+        userMap.put("basyir.marpaung", new User("basyir marpaung", "basyir marpaung", "basyir marpaung@kalimat.ai", 1));
+
+        return userMap;
     }
 }
+
